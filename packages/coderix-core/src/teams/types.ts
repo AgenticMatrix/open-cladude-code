@@ -45,7 +45,7 @@ export interface TeamConfig {
   description: string;
   /** Unix timestamp (ms) when the team was created. */
   createdAt: number;
-  /** The coordinator's session ID. */
+  /** The lead agent's session ID. */
   leadSessionId?: string;
   /** Team member roster. */
   members: TeamMember[];

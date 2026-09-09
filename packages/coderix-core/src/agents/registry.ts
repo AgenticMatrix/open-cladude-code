@@ -15,10 +15,8 @@ import { join } from 'path';
 import { AgentRegistry } from '../core/agent-registry.js';
 import type { AgentDefinitionsResult } from '../core/types.js';
 import { exploreAgent, planAgent, generalPurposeAgent, verificationAgent, coderixGuideAgent, statuslineSetupAgent } from './builtin/index.js';
-import { getCoordinatorAgents } from './builtin/coordinator-agents.js';
 import { loadAgentsFromDir, getActiveAgents } from './loader.js';
 import { loadPluginAgents } from './plugin-loader.js';
-import { isCoordinatorModeEnabled } from '../teams/coordinator-mode.js';
 
 /**
  * Build an AgentRegistry by layering agents from all discovery sources.
@@ -31,14 +29,6 @@ export async function buildAgentRegistry(cwd: string): Promise<{
   const registry = new AgentRegistry();
 
   // Layer 1: built-in agents
-  const coordinatorEnabled = isCoordinatorModeEnabled();
-  if (coordinatorEnabled) {
-    // Coordinator mode: register specialized worker agents
-    for (const agent of getCoordinatorAgents()) {
-      registry.register(agent);
-    }
-  }
-  // Always register the base set (coordinator can still use them)
   registry.register(exploreAgent);
   registry.register(planAgent);
   registry.register(generalPurposeAgent);

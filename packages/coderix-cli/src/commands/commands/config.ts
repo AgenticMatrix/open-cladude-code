@@ -101,12 +101,10 @@ export const configCommands: SlashCommand[] = [
         }
 
         // Advanced
-        const coordinator = settings.coordinator_mode ?? false;
         const defaultTeam = settings.default_team;
-        if (coordinator || defaultTeam) {
+        if (defaultTeam) {
           lines.push('Advanced');
-          lines.push(row(2, 'coordinator_mode', String(coordinator)));
-          if (defaultTeam) lines.push(row(2, 'default_team', String(defaultTeam)));
+          lines.push(row(2, 'default_team', String(defaultTeam)));
           lines.push('');
         }
 

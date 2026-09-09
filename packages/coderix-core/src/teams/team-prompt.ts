@@ -1,30 +1,13 @@
 /**
- * Coordinator mode — activation and system context.
+ * Team system-prompt helpers.
  *
- * When coordinator_mode is enabled (via settings or CODERIX_COORDINATOR env var),
- * the agent uses the 'coordinator' system prompt role, which includes delegation
- * instructions and the agent registry.
+ * Provides the static team-leader declaration and the per-turn dynamic team
+ * status block injected into the leader's system prompt when a team is active.
  */
 
 import { loadTeamConfig } from './team-store.js';
 import { getUnreadCount } from './team-mailbox.js';
-import type { CoderSettings } from '../config.js';
 import type { TeamConfig } from './types.js';
-
-// ---------------------------------------------------------------------------
-// Activation checks
-// ---------------------------------------------------------------------------
-
-export function isCoordinatorModeEnabled(settings?: CoderSettings): boolean {
-  if (process.env.CODERIX_COORDINATOR === 'true') return true;
-  if (process.env.CODERIX_COORDINATOR === '1') return true;
-  if (settings?.coordinator_mode === true) return true;
-  return false;
-}
-
-export function getAgentRole(settings?: CoderSettings): 'default' | 'coordinator' {
-  return isCoordinatorModeEnabled(settings) ? 'coordinator' : 'default';
-}
 
 // ---------------------------------------------------------------------------
 // Static team leader declaration (for system prompt — cache-friendly)

@@ -40,7 +40,6 @@ import type { SubAgentRegistry } from './subagent-registry.js';
 import type { AgentRegistry } from './agent-registry.js';
 import { estimateTokens, tokenCountWithEstimation, estimateMessageTokens } from './token-budget.js';
 import { ToolExecutionQueue } from './tool-queue.js';
-import { COORDINATOR_ALLOWED_TOOLS } from '../agents/tool-filtering.js';
 import { sessionDir, writeSessionMeta } from './session-store.js';
 import type { CoreState } from '../state/core-state.js';
 import type { ToolRequestEvent } from '../state/observable.js';
@@ -92,8 +91,8 @@ export interface QueryConfig {
   systemPromptAssembler?: SystemPromptAssembler;
   /** AgentRegistry for looking up agent type definitions */
   agentRegistry?: AgentRegistry;
-  /** Role determines tool access: 'coordinator' gets restricted to orchestration tools only */
-  agentRole?: 'default' | 'coordinator' | 'worker';
+  /** Role determines tool access: 'worker' is a sub-agent with restricted orchestration tools */
+  agentRole?: 'default' | 'worker';
   /** Read CoreState snapshot (engine-level fields). */
   getCoreState?: () => CoreState;
   /** Emit a tool request to the frontend (background tasks, agents). */
@@ -508,7 +507,6 @@ export async function* query(config: QueryConfig): AsyncGenerator<QueryMessage> 
 
     // === Get tool definitions for LLM ===
     const toolDefinitions = toolRegistry.getDefinitions()
-      .filter((def) => agentRole !== 'coordinator' || COORDINATOR_ALLOWED_TOOLS.has(def.name))
       .map((def) => ({
         name: def.name,
         description: def.description,
@@ -754,14 +752,6 @@ export async function* query(config: QueryConfig): AsyncGenerator<QueryMessage> 
             };
             orderedBlocks.push(toolBlock);
 
-            // Coordinator whitelist enforcement — safety net
-            if (agentRole === 'coordinator' && !COORDINATOR_ALLOWED_TOOLS.has(toolBlock.name)) {
-              queue.storeError(toolBlock,
-                `Tool '${toolBlock.name}' is not available in coordinator mode. Use agent/team orchestration tools instead.`);
-              buildingBlock = null;
-              continue;
-            }
-
             // ── ask-user-question: block and wait for user input ──
             if (toolBlock.name === 'AskUserQuestion') {
               const qInput = toolBlock.input as Record<string, unknown>;
@@ -1004,13 +994,6 @@ export async function* query(config: QueryConfig): AsyncGenerator<QueryMessage> 
               if (block.type === 'tool_use') {
                 const toolBlock = block as ToolUseBlock;
                 orderedBlocks.push(toolBlock);
-
-                // Coordinator whitelist enforcement — safety net
-                if (agentRole === 'coordinator' && !COORDINATOR_ALLOWED_TOOLS.has(toolBlock.name)) {
-                  queue.storeError(toolBlock,
-                    `Tool '${toolBlock.name}' is not available in coordinator mode. Use agent/team orchestration tools instead.`);
-                  continue;
-                }
 
                 // ── ask-user-question: block and wait for user input ──
                 if (toolBlock.name === 'AskUserQuestion') {
@@ -1560,7 +1543,7 @@ export async function* query(config: QueryConfig): AsyncGenerator<QueryMessage> 
     let notificationJustDrained = false;
     const allNotifications: string[] = [];
     // Workers don't need background notifications — those are for the
-    // coordinator / main agent only. A worker seeing another worker's
+    // main agent only. A worker seeing another worker's
     // completion is noise that clutters its transcript.
     if (config.subAgentRegistry && agentRole !== 'worker') {
       allNotifications.push(...config.subAgentRegistry.drainNotifications());
@@ -1628,17 +1611,6 @@ export async function* query(config: QueryConfig): AsyncGenerator<QueryMessage> 
     // ── Increment plan mode turn counter ───────────────────────
     if (pm.current && permissionEngine.getMode() === PermissionMode.PLAN) {
       incrementPlanModeTurn(pm.current);
-    }
-
-    // If this is the coordinator and background sub-agents are still
-    // running, end turn to prevent polling with TaskGet.
-    // Exception: if a notification was just drained (e.g. after Listen woke
-    // early), continue the turn so the model can process the results.
-    if (agentRole === 'coordinator' && config.subAgentRegistry) {
-      const running = config.subAgentRegistry.list().filter(a => a.status === 'running');
-      if (running.length > 0 && !notificationJustDrained) {
-        return;
-      }
     }
 
     // === Context compaction check ===

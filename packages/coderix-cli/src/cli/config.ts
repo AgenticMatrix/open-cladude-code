@@ -89,8 +89,6 @@ export interface CoderSettings {
   theme?: string;
   /** Max concurrent tool executions (default: 32, range: 1-256). */
   max_tool_concurrency?: number;
-  /** Enable coordinator mode for multi-agent team orchestration. */
-  coordinator_mode?: boolean;
   /** Default team name to resume on startup. */
   default_team?: string;
   /** Persistent memory system configuration. */

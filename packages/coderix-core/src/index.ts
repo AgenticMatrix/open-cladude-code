@@ -117,7 +117,7 @@ export type {
 } from './tools/types.js';
 
 // ── Teams ──────────────────────────────────────────────────────────
-export { getAgentRole, getTeamLeaderStaticDeclaration, getTeamStatusBlock } from './teams/coordinator-mode.js';
+export { getTeamLeaderStaticDeclaration, getTeamStatusBlock } from './teams/team-prompt.js';
 export { drainUnreadMessages } from './teams/team-mailbox.js';
 export { loadTeamConfig, listTeams } from './teams/team-store.js';
 export { execute as executeSendMessage } from './teams/tools/team-message/executor.js';

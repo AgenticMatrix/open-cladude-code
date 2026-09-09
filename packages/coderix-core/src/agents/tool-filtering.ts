@@ -84,16 +84,3 @@ export function filterToolsForResumedAgent(
 
   return filtered;
 }
-
-/** Tools allowed for the coordinator in coordinator mode.
- *  The coordinator is an orchestrator — it delegates work to sub-agents
- *  and teams. It should NOT have direct filesystem or code-editing tools. */
-export const COORDINATOR_ALLOWED_TOOLS: ReadonlySet<string> = new Set([
-  'Agent',
-  'SendMessage',
-  'TaskStop',
-  'TaskGet',
-  'Listen',
-  'TeamCreate',
-  'TeamDelete',
-]);

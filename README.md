@@ -105,7 +105,6 @@ coderix -m "deepseek/deepseek-v4-pro"
 - **Skills** — Pluggable skill modules
 - **Session Management** — Checkpoint, resume, fork sessions
 - **Model Picker** — Interactive terminal model selection (`coderix --model` / `coderix setup`)
-- **Coordinator Mode** — Orchestrate a team of worker sub-agents instead of editing files directly
 - **Desktop App** — Electron desktop client with Monaco editor, xterm terminal, and source control
 
 ---
@@ -198,36 +197,6 @@ Edit `~/.coderix/settings.json`:
   "theme": "dark"
 }
 ```
-
----
-
-## Coordinator Mode
-
-Coordinator mode transforms Coderix from a direct code-editing agent into a pure orchestrator. Instead of reading files and writing code itself, the coordinator decomposes tasks, spawns parallel worker sub-agents to do the work, and synthesizes results.
-
-### Enable
-
-```bash
-# Via environment variable
-export CODERIX_COORDINATOR=true
-coderix
-
-# Or persist in settings
-coderix config set coordinator_mode true
-```
-
-### How It Works
-
-The coordinator follows a 4-stage workflow:
-
-| Phase | Who | What |
-|---|---|---|
-| **Research** | Workers (parallel) | Explore the codebase, find relevant files, understand the problem |
-| **Synthesis** | Coordinator | Read findings, design the approach, write implementation specs |
-| **Implementation** | Workers | Make targeted changes per spec |
-| **Verification** | Workers (fresh) | Independently test and review changes |
-
-The coordinator only has orchestration tools (`Agent`, `SendMessage`, `TaskGet`, `TaskStop`, `TeamCreate`, `TeamDelete`, `Sleep`) — no filesystem or code-editing tools. All file operations are delegated to workers.
 
 ---
 

@@ -29,7 +29,7 @@ import { CheckpointManager } from './checkpoint.js';
 import type { HookManager } from '../hooks/index.js';
 import type { SubAgentRegistry } from './subagent-registry.js';
 import type { AgentRegistry } from './agent-registry.js';
-import { getAgentRole, getTeamLeaderStaticDeclaration, getTeamStatusBlock } from '../teams/coordinator-mode.js';
+import { getTeamLeaderStaticDeclaration, getTeamStatusBlock } from '../teams/team-prompt.js';
 import { drainUnreadMessages } from '../teams/team-mailbox.js';
 import { execute as executeSendMessage } from '../teams/tools/team-message/executor.js';
 import { filterToolsForResumedAgent, GLOBAL_DISALLOWED_FOR_SUBAGENTS } from '../agents/tool-filtering.js';
@@ -87,13 +87,13 @@ export interface QueryEngineConfig {
   hookManager?: HookManager;
   /** SubAgentRegistry for tracking spawned sub-agents */
   subAgentRegistry?: SubAgentRegistry;
-  /** SystemPromptAssembler for assembling worker/coordinator prompts */
+  /** SystemPromptAssembler for assembling worker prompts */
   systemPromptAssembler?: SystemPromptAssembler;
   /** AgentRegistry for agent type definitions */
   agentRegistry?: AgentRegistry;
-  /** CoderSettings for coordinator mode detection */
+  /** CoderSettings for engine configuration */
   settings?: CoderSettings;
-  /** Active team name (when running in coordinator mode) */
+  /** Active team name (when running in a team) */
   teamName?: string;
   /** EventBus for decoupled frontend communication.
    *  Engine events are emitted to both AsyncGenerator AND
@@ -178,7 +178,6 @@ export class QueryEngine {
 
   async init(): Promise<void> {
     const assembler = this.config.systemPromptAssembler ?? new SystemPromptAssembler();
-    const agentRole = getAgentRole(this.config.settings);
 
     // If teams exist on disk, inject static team declarations into system prompt.
     // Dynamic worker list is injected per-turn in submitMessage() to stay cache-friendly.
@@ -204,7 +203,6 @@ export class QueryEngine {
       permissionMode: this.permissionEngine.getMode(),
       customPrompt: this.config.customSystemPrompt,
       appendPrompt,
-      agentRole,
       model: this.config.model,
       memorySettings: this.config.settings?.memory,
       briefMode: this.config.briefMode ?? false,
@@ -512,7 +510,6 @@ export class QueryEngine {
       subAgentRegistry: this.config.subAgentRegistry,
       systemPromptAssembler: this.config.systemPromptAssembler,
       agentRegistry: this.config.agentRegistry,
-      agentRole: getAgentRole(this.config.settings),
       getCoreState,
       emitToolRequest: eventBus
         ? (req) => eventBus.toolRequests.next(req)

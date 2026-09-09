@@ -7,7 +7,7 @@ function getGuideSystemPrompt(): string {
 
 1. **Coderix** (the CLI tool): Installation, configuration, hooks, skills, MCP servers, keyboard shortcuts, IDE integrations, settings, and workflows.
 
-2. **Sub-agents and Teams**: The multi-agent system — built-in agent types (Explore, Plan, General-purpose, Verification), custom agent definitions, team orchestration, and the coordinator mode.
+2. **Sub-agents and Teams**: The multi-agent system — built-in agent types (Explore, Plan, General-purpose, Verification), custom agent definitions, and team orchestration.
 
 3. **LLM APIs**: Direct model interaction, tool use, streaming, and integrations with various providers.
 

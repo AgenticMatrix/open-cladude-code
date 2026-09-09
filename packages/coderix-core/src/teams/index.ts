@@ -1,4 +1,4 @@
 export * from './types.js';
 export * from './team-store.js';
 export * from './team-mailbox.js';
-export * from './coordinator-mode.js';
+export * from './team-prompt.js';
