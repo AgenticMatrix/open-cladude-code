@@ -186,7 +186,12 @@ export async function buildEngine(options: Options = {}): Promise<BuiltEngine> {
   const model = options.model ?? config.model;
   const settings = loadSettings();
 
-  const client = new Anthropic({ baseURL: config.baseUrl, apiKey: config.apiKey });
+  // Per-agent model binding: options.baseUrl/apiKey (injected by agentstation)
+  // override the global ~/.coderix/settings.json endpoint/auth.
+  const baseUrl = options.baseUrl ?? config.baseUrl;
+  const apiKey = options.apiKey ?? config.apiKey;
+
+  const client = new Anthropic({ baseURL: baseUrl, apiKey });
   const callModel = createCallModelFromClient(client, model);
 
   const sessionManager = new SessionManager();

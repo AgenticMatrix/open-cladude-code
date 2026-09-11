@@ -186,6 +186,10 @@ export interface SDKInputMessage {
 export interface Options {
   abortController?: AbortController;
   allowedTools?: string[];
+  /** Override the endpoint from ~/.coderix/settings.json (per-agent model binding). */
+  baseUrl?: string;
+  /** Override the auth token from ~/.coderix/settings.json (per-agent model binding). */
+  apiKey?: string;
   appendSystemPrompt?: string;
   canUseTool?: CanUseTool;
   cwd?: string;

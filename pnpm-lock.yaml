@@ -269,7 +269,7 @@ importers:
         version: 5.0.1
       bidi-js:
         specifier: ^1.0.3
-        version: 1.0.3
+        version: 1.1.0
       chalk:
         specifier: ^5.3.0
         version: 5.6.2
@@ -338,7 +338,7 @@ importers:
         specifier: ^0.102.0
         version: 0.102.0(zod@4.4.3)
       '@coderix/core':
-        specifier: workspace:*
+        specifier: file:../coderix-core
         version: link:../coderix-core
     devDependencies:
       '@types/node':
@@ -2144,8 +2144,8 @@ packages:
     engines: {node: '>=6.0.0'}
     hasBin: true
 
-  bidi-js@1.0.3:
-    resolution: {integrity: sha512-RKshQI1R3YQ+n9YJz2QQ147P66ELpa1FQEg20Dk8oW9t2KgLbpDLLp9aGZ7y8WHSshDknG0bknqGw5/tyCs5tw==}
+  bidi-js@1.1.0:
+    resolution: {integrity: sha512-fX1Onk0tdVPC7obPWB5EbJ1z7NVhLq4m2xZLq2YXBkxzMXIGRpNMU88n0EPgWseKl12J7zXs7qrDxPK4sRs2fg==}
 
   binary-extensions@2.3.0:
     resolution: {integrity: sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==}
@@ -6719,7 +6719,7 @@ snapshots:
 
   baseline-browser-mapping@2.10.40: {}
 
-  bidi-js@1.0.3:
+  bidi-js@1.1.0:
     dependencies:
       require-from-string: 2.0.2
 
