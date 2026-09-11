@@ -56,6 +56,12 @@ export interface ModelPrice {
 export interface ModelItem {
   name: string;
   price?: ModelPrice;
+  /** Per-model sampling temperature (0–2). */
+  temperature?: number;
+  /** Per-model top-p sampling (0–1). */
+  top_p?: number;
+  /** Per-model max output tokens. */
+  max_tokens?: number;
 }
 
 export interface ModelEntry {

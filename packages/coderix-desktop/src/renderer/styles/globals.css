@@ -52,6 +52,9 @@
   --color-border:                rgba(0, 0, 0, 0.06);
   --color-border-focus:          rgba(217, 119, 87, 0.35);
 
+  /* === Inputs / Forms === */
+  --color-input-bg:               #FFFFFF;
+
   /* === Code / Terminal === */
   --color-code-bg:               #F0EDE5;
   --color-code-text:             #29261B;
@@ -125,6 +128,9 @@
   --color-separator-strong:      rgba(255, 255, 255, 0.1);
   --color-border:                rgba(255, 255, 255, 0.08);
   --color-border-focus:          rgba(217, 119, 87, 0.4);
+
+  /* === Inputs / Forms === */
+  --color-input-bg:               #1E1E1C;
 
   /* === Code / Terminal === */
   --color-code-bg:               #2D2D2A;

@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Bot, Palette, ShieldCheck, RefreshCw, X, Plus, Trash2, Sun, Moon, Cpu } from 'lucide-react';
+import { Bot, Palette, ShieldCheck, RefreshCw, X, Plus, ChevronRight, Sun, Moon, Cpu } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useUIStore, type PermissionMode, type Theme } from '../../store/uiStore.js';
-import { useSettingsStore, type SettingsData, type ProviderConfig, type AgentEngine, PROVIDER_CATALOG, getProviderModels, getProviderBaseUrl } from '../../store/settingsStore.js';
+import { useSettingsStore, type SettingsData, type ProviderConfig, type AgentEngine } from '../../store/settingsStore.js';
+import ProviderEditor from './ProviderEditor.js';
+import { providerLabel, ProviderLogo } from './providerMeta.js';
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -31,13 +33,14 @@ const NAV_ITEMS: NavItem[] = [
 
 export default function SettingsView({ onClose }: { onClose?: () => void }): React.ReactElement {
   const [activeTab, setActiveTab] = useState<SettingsTab>('model');
-  const [showApiKey, setShowApiKey] = useState<Record<string, boolean>>({});
   const [draft, setDraft] = useState<SettingsData | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
   const [appVersion, setAppVersion] = useState('');
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updateMsg, setUpdateMsg] = useState('');
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
   const { setTheme, setPermissionMode } = useUIStore();
   const { settings, loading, load, save } = useSettingsStore();
 
@@ -83,26 +86,33 @@ export default function SettingsView({ onClose }: { onClose?: () => void }): Rea
     }
   }, [draft, save]);
 
-  const addProvider = useCallback(() => {
-    setDraft((d) => {
-      if (!d) return d;
-      const firstKey = Object.keys(PROVIDER_CATALOG)[0] ?? 'deepseek';
-      const models = getProviderModels(firstKey).map((m) => ({ name: m, temperature: 0.7, maxTokens: 32768 }));
-      return {
-        ...d,
-        providers: [...d.providers, {
-          name: firstKey, apiKey: '', baseUrl: getProviderBaseUrl(firstKey),
-          models, connected: false,
-        }],
-      };
-    });
-  }, []);
+  const addProvider = () => {
+    if (!draft) return;
+    const idx = draft.providers.length;
+    setDraft({ ...draft, providers: [...draft.providers, { name: '', apiKey: '', baseUrl: '', models: [], connected: false }] });
+    setIsCreating(true);
+    setEditingIndex(idx);
+  };
 
-  const removeProvider = useCallback((i: number) => {
-    setDraft((d) => d ? { ...d, providers: d.providers.filter((_, idx) => idx !== i) } : d);
-  }, []);
+  const removeProvider = (i: number) => {
+    setDraft((d) => (d ? { ...d, providers: d.providers.filter((_, idx) => idx !== i) } : d));
+  };
 
-  const toggleApiKey = useCallback((name: string) => setShowApiKey((s) => ({ ...s, [name]: !s[name] })), []);
+  const handleEditorBack = () => {
+    if (isCreating && editingIndex !== null && draft) {
+      const p = draft.providers[editingIndex];
+      if (p && !p.name && p.models.length === 0) {
+        setDraft({ ...draft, providers: draft.providers.filter((_, idx) => idx !== editingIndex) });
+      }
+    }
+    setIsCreating(false);
+    setEditingIndex(null);
+  };
+
+  const handleDeleteProvider = () => {
+    if (editingIndex !== null) removeProvider(editingIndex);
+    setEditingIndex(null);
+  };
 
   const handleCheckUpdate = useCallback(async () => {
     if (!window.coderixAPI?.app?.checkUpdate) return;
@@ -143,6 +153,20 @@ export default function SettingsView({ onClose }: { onClose?: () => void }): Rea
 
   const sectionTitle: React.CSSProperties = { fontSize: 'var(--text-xs)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 'var(--tracking-wider)', color: 'var(--color-text-secondary)' };
   const sectionDesc: React.CSSProperties = { marginTop: '4px', fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)' };
+
+  // Derive the current default-model selection (provider + model) from the single
+  // "provider/model" string so the two-level picker stays in sync with the draft.
+  const defaultSel = (() => {
+    const dm = draft?.defaultModel ?? '';
+    if (!dm) return { provider: '', model: '' };
+    for (const p of draft?.providers ?? []) {
+      for (const m of p.models) {
+        if (qualifiedModelName(p.name, m.name) === dm) return { provider: p.name, model: m.name };
+      }
+    }
+    return { provider: '', model: '' };
+  })();
+  const defaultProviderModels = draft ? (draft.providers.find((p) => p.name === defaultSel.provider)?.models ?? []) : [];
 
   return (
     <div className="flex h-full flex-col bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
@@ -196,78 +220,79 @@ export default function SettingsView({ onClose }: { onClose?: () => void }): Rea
 
           {/* Content — right panel */}
           <main className="min-w-0 flex-1 overflow-y-auto px-6 py-6">
-            {activeTab === 'model' && (
+            {activeTab === 'model' && (isCreating || editingIndex !== null ? (
+              <ProviderEditor
+                provider={draft.providers[editingIndex!] ?? { name: '', apiKey: '', baseUrl: '', models: [], connected: false }}
+                isNew={isCreating}
+                onChange={(p) => updateProviderInDraft(editingIndex!, p)}
+                onBack={handleEditorBack}
+                onDelete={isCreating ? undefined : handleDeleteProvider}
+              />
+            ) : (
               <div className="space-y-5">
                 <div>
-                  <h3 style={sectionTitle}>模型配置</h3>
-                  <p style={sectionDesc}>配置模型 Provider、API Key 与默认模型。</p>
+                  <h3 style={sectionTitle}>默认模型</h3>
+                  <p style={sectionDesc}>选择全局默认模型，先选 Provider，再选具体模型。</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '8px' }}>
+                    <label style={{ ...S.label, marginTop: 0 }}>
+                      Provider
+                      <select
+                        value={defaultSel.provider}
+                        onChange={(e) => {
+                          const prov = draft.providers.find((p) => p.name === e.target.value);
+                          const first = prov?.models[0];
+                          updateDraft({ defaultModel: first ? qualifiedModelName(prov!.name, first.name) : '' });
+                        }}
+                        style={{ ...S.select, marginTop: '4px' }}
+                      >
+                        <option value="">未选择</option>
+                        {draft.providers.filter((p) => p.models.length > 0).map((p) => (
+                          <option key={p.name} value={p.name}>{p.name ? providerLabel(p.name) : '未命名 Provider'}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label style={{ ...S.label, marginTop: 0 }}>
+                      模型
+                      <select
+                        value={defaultSel.model}
+                        onChange={(e) => updateDraft({ defaultModel: qualifiedModelName(defaultSel.provider, e.target.value) })}
+                        disabled={!defaultSel.provider}
+                        style={{ ...S.select, marginTop: '4px', opacity: defaultSel.provider ? 1 : 0.5 }}
+                      >
+                        <option value="">未选择</option>
+                        {defaultProviderModels.map((m) => (
+                          <option key={m.name} value={m.name}>{m.name}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
                 </div>
 
-                {draft.providers.map((p, i) => (
-                  <div key={i} style={S.card}>
-                    <div style={S.cardHeader}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <select
-                          value={p.name}
-                          onChange={(e) => {
-                            const n = e.target.value;
-                            updateProviderInDraft(i, { name: n, apiKey: '', models: getProviderModels(n).map(m => ({ name: m, temperature: 0.7, maxTokens: 32768 })), baseUrl: getProviderBaseUrl(n) });
-                          }}
-                          style={{ border: '1px solid var(--color-separator)', borderRadius: 'var(--radius-md)', padding: '4px 8px', fontSize: 'var(--text-base)', fontWeight: 600, background: 'var(--color-input-bg)', color: 'var(--color-text-primary)' }}
-                        >
-                          {Object.keys(PROVIDER_CATALOG).map(k => <option key={k} value={k}>{k.charAt(0).toUpperCase() + k.slice(1)}</option>)}
-                          {!PROVIDER_CATALOG[p.name.toLowerCase()] && <option value={p.name}>{p.name}</option>}
-                        </select>
+                <div>
+                  <h3 style={sectionTitle}>大模型配置</h3>
+                  <p style={sectionDesc}>管理 Provider 与模型。</p>
+                  <div className="mt-2 space-y-2">
+                    {draft.providers.map((p, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => { setIsCreating(false); setEditingIndex(i); }}
+                        className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-separator)] bg-[var(--color-bg-secondary)] px-4 py-3 text-left transition-colors hover:bg-[var(--color-bg-tertiary)]"
+                      >
+                        <ProviderLogo provider={p.name} size={28} />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium text-[var(--color-text-primary)]">{p.name ? providerLabel(p.name) : '未命名 Provider'}</span>
+                          <span className="block text-xs text-[var(--color-text-secondary)]">{p.models.length} 个模型</span>
+                        </span>
                         <span style={S.badge(p.connected)}>{p.connected ? '已配置' : '未配置'}</span>
-                      </span>
-                      <button onClick={() => removeProvider(i)} aria-label="删除 Provider" style={{ background: 'none', border: 'none', color: 'var(--color-text-tertiary)', cursor: 'pointer', padding: '4px', borderRadius: 'var(--radius-sm)' }} className="hover:text-[var(--color-danger)] hover:bg-[var(--color-danger-muted)] transition-colors">
-                        <Trash2 size={16} />
+                        <ChevronRight size={16} className="text-[var(--color-text-tertiary)]" />
                       </button>
-                    </div>
-
-                    {/* API Key */}
-                    <label style={{ ...S.label, marginTop: 0 }}>API Key</label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <input
-                        type={showApiKey[p.name] ? 'text' : 'password'}
-                        value={p.apiKey}
-                        onChange={(e) => updateProviderInDraft(i, { apiKey: e.target.value })}
-                        placeholder="输入 API Key..."
-                        style={{ ...S.input, flex: 1 }}
-                      />
-                      <button onClick={() => toggleApiKey(p.name)} style={{ padding: '6px 10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-separator)', background: 'var(--color-bg-tertiary)', cursor: 'pointer', fontSize: 'var(--text-xs)' }}>{showApiKey[p.name] ? '隐藏' : '显示'}</button>
-                    </div>
-
-                    {/* Base URL */}
-                    <label style={S.label}>Base URL</label>
-                    <input type="text" value={p.baseUrl} onChange={(e) => updateProviderInDraft(i, { baseUrl: e.target.value })} style={S.input} />
-
-                    {/* Model */}
-                    <label style={S.label}>模型</label>
-                    {PROVIDER_CATALOG[p.name.toLowerCase()]?.isRelay ? (
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <input
-                          type="text"
-                          value={draft.defaultModel}
-                          onChange={(e) => updateDraft({ defaultModel: e.target.value })}
-                          placeholder="输入模型名，如 openai/gpt-4.1"
-                          style={{ ...S.input, flex: 1 }}
-                        />
-                        <select onChange={(e) => { if (e.target.value) updateDraft({ defaultModel: e.target.value }); }} style={{ ...S.select, width: '40px', flexShrink: 0 }} defaultValue="">
-                          <option value="" disabled>▼</option>
-                          {p.models.map(m => <option key={m.name} value={qualifiedModelName(p.name, m.name)}>{qualifiedModelName(p.name, m.name)}</option>)}
-                        </select>
-                      </div>
-                    ) : (
-                      <select value={draft.defaultModel} onChange={(e) => updateDraft({ defaultModel: e.target.value })} style={S.select}>
-                        {p.models.map(m => <option key={m.name} value={qualifiedModelName(p.name, m.name)}>{qualifiedModelName(p.name, m.name)}</option>)}
-                      </select>
-                    )}
+                    ))}
+                    <button style={S.addBtn} onClick={addProvider}><Plus size={16} />新增 Provider</button>
                   </div>
-                ))}
-                <button style={S.addBtn} onClick={addProvider}><Plus size={16} />添加 Provider</button>
+                </div>
               </div>
-            )}
+            ))}
 
             {activeTab === 'engine' && (
               <div className="space-y-5">

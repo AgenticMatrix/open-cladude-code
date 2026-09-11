@@ -10,6 +10,11 @@ export interface ModelConfig {
   name: string;
   temperature: number;
   maxTokens: number;
+  maxContext: number;
+  topP: number;
+  cachePrice: number;
+  inputPrice: number;
+  outputPrice: number;
 }
 
 export interface ProviderConfig {
@@ -37,7 +42,18 @@ export type AgentEngine = 'coderix' | 'claude-code';
 
 interface CoreModelItem {
   name: string;
-  price?: { input: number; output: number };
+  price?: {
+    input: number;
+    output: number;
+    cache_read_input?: number;
+    currency?: string;
+    unit?: number;
+    concurrency?: number;
+    max_context?: number;
+  };
+  temperature?: number;
+  top_p?: number;
+  max_tokens?: number;
 }
 
 interface CoreModelEntry {
@@ -91,11 +107,19 @@ function settingsToUI(config: CoderSettings): SettingsData {
         apiKey: entry.auth_token_env ?? '',
         baseUrl: entry.base_url ?? '',
         models:
-          entry.model?.map((m) => ({
-            name: typeof m === 'string' ? m : m.name,
-            temperature: 0.7,
-            maxTokens: entry.max_tokens ?? config.max_tokens ?? 32768,
-          })) ?? [],
+          entry.model?.map((m) => {
+            const item = typeof m === 'string' ? { name: m } : m;
+            return {
+              name: item.name,
+              temperature: item.temperature ?? 0.7,
+              maxTokens: item.max_tokens ?? entry.max_tokens ?? config.max_tokens ?? 32768,
+              maxContext: item.price?.max_context ?? 1000000,
+              topP: item.top_p ?? 1.0,
+              cachePrice: item.price?.cache_read_input ?? 0,
+              inputPrice: item.price?.input ?? 0,
+              outputPrice: item.price?.output ?? 0,
+            };
+          }) ?? [],
         connected: !!(entry.auth_token_env && entry.auth_token_env.length > 0 && !isPlaceholderKey(entry.auth_token_env)),
       })) ?? [],
     defaultModel: qualifyDefaultModel(config),
@@ -116,7 +140,18 @@ function uiToSettings(data: SettingsData): Partial<CoderSettings> {
       provider: p.name.toLowerCase(),
       base_url: p.baseUrl,
       auth_token_env: p.apiKey,
-      model: p.models.map((m) => m.name),
+      model: p.models.map((m) => ({
+        name: m.name,
+        temperature: m.temperature,
+        top_p: m.topP,
+        max_tokens: m.maxTokens,
+        price: {
+          input: m.inputPrice,
+          output: m.outputPrice,
+          cache_read_input: m.cachePrice,
+          max_context: m.maxContext,
+        },
+      })),
     })),
   };
 }
@@ -138,44 +173,59 @@ interface SettingsStore {
 // ---------------------------------------------------------------------------
 
 export const PROVIDER_CATALOG: Record<string, { baseUrl: string; models: string[]; isRelay?: boolean }> = {
-  deepseek: {
-    baseUrl: 'https://api.deepseek.com/anthropic',
-    models: ['deepseek-v4-pro', 'deepseek-v3', 'deepseek-r1', 'deepseek-chat'],
-  },
   anthropic: {
     baseUrl: 'https://api.anthropic.com',
-    models: ['claude-sonnet-4-20250514', 'claude-opus-4-20250514', 'claude-haiku-4-5-20251001', 'claude-sonnet-4-6', 'claude-fable-5'],
+    models: ['claude-sonnet-5', 'claude-opus-4-8', 'claude-opus-5'],
   },
   openai: {
     baseUrl: 'https://api.openai.com/v1',
-    models: ['gpt-4.1', 'gpt-4o', 'gpt-4.1-mini', 'gpt-4o-mini', 'o4-mini', 'o3-mini'],
-  },
-  google: {
-    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
-    models: ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash'],
+    models: ['gpt-5', 'gpt-5-mini', 'gpt-5-nano', 'gpt-5.5'],
   },
   // ── 中转站 / Relay — one key + one URL, any model ──
   openrouter: {
     baseUrl: 'https://openrouter.ai/api/v1',
-    models: ['openai/gpt-4.1', 'anthropic/claude-sonnet-4', 'google/gemini-2.5-pro', 'deepseek/deepseek-v3', 'meta-llama/llama-4-maverick'],
+    models: ['anthropic/claude-sonnet-5', 'openai/gpt-5', 'google/gemini-3-flash'],
     isRelay: true,
   },
-  oneapi: {
-    baseUrl: 'https://your-oneapi-host.com/v1',
-    models: ['gpt-4o', 'claude-sonnet-4-20250514', 'deepseek-v4-pro'],
-    isRelay: true,
+  glm: {
+    baseUrl: 'https://open.bigmodel.cn/api/anthropic',
+    models: ['glm-5', 'glm-5.2', 'glm-5.3'],
   },
-  moonshot: {
-    baseUrl: 'https://api.moonshot.cn/v1',
-    models: ['moonshot-v1-8k', 'moonshot-v1-32k', 'moonshot-v1-128k'],
+  deepseek: {
+    baseUrl: 'https://api.deepseek.com/anthropic',
+    models: ['deepseek-v4-flash', 'deepseek-v4-pro'],
   },
-  zhipu: {
-    baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
-    models: ['glm-4-plus', 'glm-4-air', 'glm-4-flash'],
+  google: {
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+    models: ['gemini-3-flash', 'gemini-3-flash-lite', 'gemini-3-pro'],
+  },
+  grok: {
+    baseUrl: 'https://api.x.ai/v1',
+    models: ['grok-4', 'grok-4-fast', 'grok-4-mini'],
   },
   qwen: {
     baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-    models: ['qwen-max', 'qwen-plus', 'qwen-turbo', 'qwen3-235b-a22b'],
+    models: ['qwen3.8-flash', 'qwen3.8-max-0902'],
+  },
+  moonshot: {
+    baseUrl: 'https://api.moonshot.cn/anthropic',
+    models: ['kimi-k2.6', 'kimi-k2.7-code', 'kimi-k3', 'kimi-k2.7-code-highspeed'],
+  },
+  tencent: {
+    baseUrl: 'https://api.hunyuan.cloud.tencent.com/anthropic',
+    models: ['hunyuan-2.0-instruct-20251111', 'hunyuan-2.0-thinking-20251109'],
+  },
+  bytedance: {
+    baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
+    models: ['doubao-seed-2.0-code', 'doubao-seed-2.0-lite', 'doubao-seed-2.0-pro', 'deepseek-r1-250120', 'doubao-1-5-pro-32k-character-250228', 'seed-2.5'],
+  },
+  minimax: {
+    baseUrl: 'https://api.minimaxi.com/anthropic',
+    models: ['MiniMax-M2.7', 'MiniMax-M2.7-highspeed', 'MiniMax-M3'],
+  },
+  local: {
+    baseUrl: 'http://localhost:8000/v1',
+    models: ['local-llama3-70b', 'local-qwen-32b', 'local-mistral'],
   },
 };
 
@@ -187,6 +237,20 @@ export function getProviderModels(providerName: string): string[] {
 export function getProviderBaseUrl(providerName: string): string {
   const key = providerName.toLowerCase();
   return PROVIDER_CATALOG[key]?.baseUrl ?? 'https://api.example.com';
+}
+
+/** Map a catalog provider's model names to full ModelConfig entries with defaults. */
+export function toModelConfigs(names: string[], maxTokens = 32768): ModelConfig[] {
+  return names.map((name) => ({
+    name,
+    temperature: 0.7,
+    maxTokens,
+    maxContext: 1000000,
+    topP: 1.0,
+    cachePrice: 0,
+    inputPrice: 0,
+    outputPrice: 0,
+  }));
 }
 
 export const useSettingsStore = create<SettingsStore>()((set) => ({
