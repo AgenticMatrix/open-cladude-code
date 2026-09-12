@@ -430,6 +430,22 @@ export async function setConfig(key: string, value: unknown): Promise<unknown> {
   );
 }
 
+/** Result of probing a provider's baseUrl + apiKey (test connection). */
+export interface ConnectionTestResult {
+  ok: boolean;
+  message: string;
+  latencyMs?: number;
+  models?: string[];
+  protocol?: 'anthropic' | 'openai';
+}
+
+/** Probe a provider endpoint: reachability, auth, and detected model ids. */
+export async function testConnection(baseUrl: string, apiKey?: string): Promise<ConnectionTestResult> {
+  return invokeWithTimeout<ConnectionTestResult>('config:testConnection', () =>
+    getAPI().config.testConnection(baseUrl, apiKey),
+  );
+}
+
 /** Get the current project directory. */
 export async function getProjectDirectory(): Promise<{ path: string }> {
   return invokeWithTimeout('project:get', () =>

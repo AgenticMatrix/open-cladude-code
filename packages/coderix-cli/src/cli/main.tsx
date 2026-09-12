@@ -154,9 +154,8 @@ async function initMcpAndGetPlugins(cwd: string): Promise<any[]> {
 
 async function runPrintMode(queryText: string): Promise<void> {
   let config; try { config = loadConfig(); } catch (err) { process.stderr.write(`Config error: ${(err as Error).message}\n`); process.exit(1); }
-  const { createClient } = await import('../api/client.js');
-  const { createCallModelFromClient } = await import('@coderix/core');
-  const client = createClient(config); const callModel = createCallModelFromClient(client, config.model);
+  const { createCallModel } = await import('@coderix/core');
+  const callModel = createCallModel(config, config.model);
   const { SessionManager } = await import('@coderix/core');
   const sm = new SessionManager(); sm.create({ cwd: process.cwd(), model: config.model });
   const { setTaskListId } = await import('@coderix/core');
@@ -387,9 +386,8 @@ async function main(): Promise<void> {
 
   // ── TUI mode ──────────────────────────────────────────────────
   let config; try { config = loadConfig(); } catch (err) { process.stderr.write(`Config error: ${(err as Error).message}\n`); process.exit(1); }
-  const { createClient } = await import('../api/client.js');
-  const { createCallModelFromClient } = await import('@coderix/core');
-  const client = createClient(config); const callModel = createCallModelFromClient(client, config.model);
+  const { createCallModel } = await import('@coderix/core');
+  const callModel = createCallModel(config, config.model);
   const { SessionManager } = await import('@coderix/core');
   const sm = new SessionManager();
   let initialMessages: any[] | null = null;

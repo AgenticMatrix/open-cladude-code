@@ -32,7 +32,7 @@ import type {
 import type { CoderSettings, ModelItem } from '@coderix/core';
 import { QueryEngine, SessionManager, ToolRegistry, PermissionMode } from '@coderix/core';
 import type { QueryEngineConfig, QueryEngineEvent, AgentEngine } from '@coderix/core';
-import { loadSettings, loadConfig, writeSessionMeta, sessionDir } from '@coderix/core';
+import { loadSettings, loadConfig, writeSessionMeta, sessionDir, testModelConnection } from '@coderix/core';
 import { runClaudeCodeQuery } from './claude-code-engine.js';
 import { safeSend } from './safe-send.js';
 
@@ -91,6 +91,7 @@ export const IPC_CHANNELS = {
   CONFIG_GET: 'config:get',
   CONFIG_SET: 'config:set',
   CONFIG_GET_MODEL_LIST: 'config:getModelList',
+  CONFIG_TEST_CONNECTION: 'config:testConnection',
   APP_VERSION: 'app:version',
   APP_CHECK_UPDATE: 'app:checkUpdate',
   APP_QUIT: 'app:quit',
@@ -1243,6 +1244,15 @@ export function createIpcBridge(config: IpcBridgeConfig): IpcBridge {
     return settings.model_list ?? [];
   });
 
+  ipcMain.handle(IPC_CHANNELS.CONFIG_TEST_CONNECTION, async (_event, payload: { baseUrl: string; apiKey?: string }) => {
+    try {
+      return await testModelConnection({ baseUrl: payload.baseUrl, apiKey: payload.apiKey });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { ok: false, message: sanitizeErrorMessage(message) };
+    }
+  });
+
   // ── App ────────────────────────────────────────────────────────────────
 
   ipcMain.handle(IPC_CHANNELS.APP_VERSION, async () => app.getVersion());
@@ -1554,6 +1564,7 @@ export function createIpcBridge(config: IpcBridgeConfig): IpcBridge {
       ipcMain.removeHandler(IPC_CHANNELS.CONFIG_GET);
       ipcMain.removeHandler(IPC_CHANNELS.CONFIG_SET);
       ipcMain.removeHandler(IPC_CHANNELS.CONFIG_GET_MODEL_LIST);
+      ipcMain.removeHandler(IPC_CHANNELS.CONFIG_TEST_CONNECTION);
       ipcMain.removeHandler(IPC_CHANNELS.APP_VERSION);
       ipcMain.removeHandler(IPC_CHANNELS.APP_CHECK_UPDATE);
       ipcMain.removeHandler('project:get');

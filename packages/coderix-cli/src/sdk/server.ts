@@ -23,7 +23,7 @@ import {
   loadConfig,
   loadSettings,
   getMaxToolConcurrency,
-  createCallModelFromClient,
+  createCallModel,
   SessionManager,
   ToolRegistry,
   QueryEngine,
@@ -46,7 +46,6 @@ import type {
   DeferredQuestion,
   CompletionUsage,
 } from '@coderix/core';
-import { createClient } from '../api/client.js';
 
 // ── Tool registry (mirrors gateway/server.ts) ────────────────────────
 
@@ -105,8 +104,7 @@ export async function startSdkServer(): Promise<void> {
     process.exit(1);
   }
 
-  const client = createClient(config);
-  const callModel = createCallModelFromClient(client, config.model);
+  const callModel = createCallModel(config, config.model);
   const toolRegistry = buildToolRegistry();
   const sessionManager = new SessionManager();
   sessionManager.create({ cwd: process.cwd(), model: config.model });

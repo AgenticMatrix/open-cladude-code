@@ -44,7 +44,8 @@ export { CheckpointManager } from './core/checkpoint.js';
 export { SubAgentRegistry } from './core/subagent-registry.js';
 export type { SubAgentRecord } from './core/subagent-registry.js';
 export { AgentRegistry } from './core/agent-registry.js';
-export { createCallModelFromClient } from './core/provider-adapter.js';
+export { createCallModelFromClient, createCallModel, createCallModelFromOpenAI } from './core/provider-adapter.js';
+export type { CallModelConfig } from './core/provider-adapter.js';
 export { Compactor, requestManualCompact } from './core/compactor.js';
 export { snipCompact, createSnipMarker, SNIP_MARKER, requestSnip, consumeSnipRequest } from './core/snip-compact.js';
 export { TokenBudget } from './core/token-budget.js';
@@ -185,11 +186,15 @@ export { runChromeMcpServer } from './mcp/builtin/chrome-mcp/index.js';
 export { runComputerUseMcpServer } from './mcp/builtin/computer-use-mcp/index.js';
 
 // ── Config ─────────────────────────────────────────────────────────
-export { loadSettings, saveSettings, loadConfig, inferProvider, getMaxToolConcurrency } from './config.js';
+export { loadSettings, saveSettings, loadConfig, inferProvider, getMaxToolConcurrency, detectProtocol } from './config.js';
 export type {
   CoderSettings, AppConfig, ModelItem, ModelEntry, ModelPrice,
   WebSearchConfig, WebBridgeConfig, PermissionRuleEntry, AgentEngine,
 } from './config.js';
+
+// ── Provider connection test ───────────────────────────────────────
+export { testModelConnection } from './core/model-connection-test.js';
+export type { ConnectionTestInput, ConnectionTestResult } from './core/model-connection-test.js';
 
 // ── Platform utilities ─────────────────────────────────────────────
 export { IS_WINDOWS, IS_MACOS, onShutdownSignal } from './utils/platform.js';

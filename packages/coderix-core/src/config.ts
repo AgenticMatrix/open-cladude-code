@@ -13,6 +13,8 @@ export interface AppConfig {
   apiKey: string;
   model: string;
   provider?: string;
+  /** Wire protocol of the resolved endpoint: 'anthropic' (Messages API) or 'openai' (Chat Completions). */
+  protocol: 'anthropic' | 'openai';
   proxy?: string;
   maxTokens?: number;
   currency?: string;
@@ -77,6 +79,8 @@ export interface ModelEntry {
   max_tokens?: number;
   /** Provider identifier (anthropic, deepseek, openai, etc.) */
   provider?: string;
+  /** Wire protocol override: 'anthropic' or 'openai'. Defaults to URL detection. */
+  protocol?: 'anthropic' | 'openai';
 }
 
 export interface WebSearchConfig {
@@ -156,6 +160,29 @@ export function inferProvider(model: string): string {
   const lower = model.toLowerCase();
   if (lower.includes('deepseek')) return 'deepseek';
   if (lower.includes('openai') || lower.includes('gpt') || lower.includes('o1') || lower.includes('o3') || lower.includes('o4')) return 'openai';
+  return 'anthropic';
+}
+
+/**
+ * Infer the wire protocol of a provider endpoint from its base URL.
+ * Mirrors agentstation-app's `detectProtocol`: `/anthropic` paths are always
+ * Anthropic Messages; OpenAI-compatible endpoints are recognized by a `/v\d+`
+ * segment or a well-known OpenAI host. Defaults to Anthropic (the engine's
+ * native protocol).
+ */
+export function detectProtocol(baseUrl: string): 'anthropic' | 'openai' {
+  const u = baseUrl.trim().toLowerCase().replace(/\/+$/, '');
+  if (u.includes('/anthropic')) return 'anthropic';
+  if (/\/v\d+/.test(u)) return 'openai';
+  if (
+    u.includes('openai.com') ||
+    u.includes('x.ai') ||
+    u.includes('openrouter.ai') ||
+    u.includes('localhost') ||
+    /:\d{4,5}\/?$/.test(u)
+  ) {
+    return 'openai';
+  }
   return 'anthropic';
 }
 
@@ -274,6 +301,7 @@ function resolveModel(settings: CoderSettings): {
   proxy?: string;
   maxTokens?: number;
   provider: string;
+  protocol?: 'anthropic' | 'openai';
   currency?: string;
   inputPrice?: number;
   outputPrice?: number;
@@ -305,6 +333,7 @@ function resolveModel(settings: CoderSettings): {
       proxy: entry.proxy,
       maxTokens: entry.max_tokens,
       provider: entry.provider ?? inferProvider(selectedModel),
+      protocol: entry.protocol,
       currency: price?.currency,
       inputPrice: price?.input,
       outputPrice: price?.output,
@@ -373,5 +402,5 @@ export function loadConfig(): AppConfig {
     );
   }
 
-  return { cwd: process.cwd(), baseUrl, apiKey, model, provider: resolved.provider, proxy, maxTokens, currency: resolved.currency, inputPrice: resolved.inputPrice ?? 0, outputPrice: resolved.outputPrice ?? 0, cacheReadPrice: resolved.cacheReadPrice ?? 0, maxContext: resolved.maxContext ?? 0, briefMode: settings.brief_mode ?? false, autoCompactEnabled: settings.auto_compact_enabled ?? true, compactThreshold: settings.compact_threshold ?? 0.85, engine: settings.engine ?? 'coderix' };
+  return { cwd: process.cwd(), baseUrl, apiKey, model, provider: resolved.provider, protocol: resolved.protocol ?? detectProtocol(baseUrl), proxy, maxTokens, currency: resolved.currency, inputPrice: resolved.inputPrice ?? 0, outputPrice: resolved.outputPrice ?? 0, cacheReadPrice: resolved.cacheReadPrice ?? 0, maxContext: resolved.maxContext ?? 0, briefMode: settings.brief_mode ?? false, autoCompactEnabled: settings.auto_compact_enabled ?? true, compactThreshold: settings.compact_threshold ?? 0.85, engine: settings.engine ?? 'coderix' };
 }

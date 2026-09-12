@@ -10,8 +10,7 @@
 
 import { createInterface } from 'node:readline';
 import { loadConfig, loadSettings, getMaxToolConcurrency } from '@coderix/core';
-import { createClient } from '../api/client.js';;
-import { createCallModelFromClient } from '@coderix/core';
+import { createCallModel } from '@coderix/core';
 import { ToolRegistry } from '@coderix/core';
 import { SessionManager } from '@coderix/core';
 import { QueryEngine } from '@coderix/core';
@@ -150,8 +149,7 @@ export async function startGateway(): Promise<void> {
   let config: ReturnType<typeof loadConfig>;
   try { config = loadConfig(); } catch (err) { process.stderr.write(`Config error: ${(err as Error).message}\n`); process.exit(1); }
 
-  const client = createClient(config);
-  const callModel = createCallModelFromClient(client, config.model);
+  const callModel = createCallModel(config, config.model);
   const toolRegistry = buildToolRegistry();
   const sessionManager = new SessionManager();
   sessionManager.create({ cwd: process.cwd(), model: config.model });

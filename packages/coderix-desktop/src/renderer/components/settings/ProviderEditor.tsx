@@ -9,6 +9,7 @@ import {
   type ModelConfig,
 } from '../../store/settingsStore.js';
 import { PROVIDER_DOCS, providerLabel, ProviderLogo } from './providerMeta.js';
+import { testConnection } from '../../ipc-client.js';
 
 interface ProviderEditorProps {
   provider: ProviderConfig;
@@ -67,6 +68,10 @@ export default function ProviderEditor({ provider, isNew, onChange, onBack, onDe
   const [showKey, setShowKey] = useState(false);
   const [confirmDeleteIndex, setConfirmDeleteIndex] = useState<number | null>(null);
   const [confirmDeleteProvider, setConfirmDeleteProvider] = useState(false);
+  const [testState, setTestState] = useState<'idle' | 'testing' | 'done'>('idle');
+  const [testOk, setTestOk] = useState<boolean | null>(null);
+  const [testMessage, setTestMessage] = useState('');
+  const [testModels, setTestModels] = useState<string[]>([]);
 
   const slug = (isNew ? name : provider.name).trim().toLowerCase();
   const selected = selectedIndex !== null ? models[selectedIndex] ?? null : null;
@@ -100,6 +105,46 @@ export default function ProviderEditor({ provider, isNew, onChange, onBack, onDe
     emit({ models: next });
     setFields({ ...EMPTY_FIELDS });
     setSelectedIndex(next.length - 1);
+  };
+
+  const handleTestConnection = async () => {
+    if (!baseUrl.trim()) {
+      setTestState('done');
+      setTestOk(false);
+      setTestMessage('请先填写 Base URL');
+      setTestModels([]);
+      return;
+    }
+    setTestState('testing');
+    setTestOk(null);
+    setTestMessage('正在测试连接…');
+    setTestModels([]);
+    try {
+      const result = await testConnection(baseUrl, apiKey);
+      setTestOk(result.ok);
+      setTestMessage(result.message);
+      setTestModels(result.models ?? []);
+    } catch (err) {
+      setTestOk(false);
+      setTestMessage(err instanceof Error ? err.message : String(err));
+      setTestModels([]);
+    } finally {
+      setTestState('done');
+    }
+  };
+
+  const addDetectedModel = (modelName: string) => {
+    if (!modelName || models.some((m) => m.name === modelName)) return;
+    const next = [...models, { ...EMPTY_FIELDS, name: modelName }];
+    setModels(next);
+    emit({ models: next });
+  };
+
+  const resetTest = () => {
+    setTestState('idle');
+    setTestOk(null);
+    setTestMessage('');
+    setTestModels([]);
   };
 
   const deleteModel = (index: number) => {
@@ -242,6 +287,7 @@ export default function ProviderEditor({ provider, isNew, onChange, onBack, onDe
               onChange={(e) => {
                 setBaseUrl(e.target.value);
                 emit({ baseUrl: e.target.value });
+                resetTest();
               }}
               placeholder="https://…"
             />
@@ -255,6 +301,7 @@ export default function ProviderEditor({ provider, isNew, onChange, onBack, onDe
                 onChange={(e) => {
                   setApiKey(e.target.value);
                   emit({ apiKey: e.target.value });
+                  resetTest();
                 }}
                 placeholder="sk-…"
               />
@@ -274,6 +321,69 @@ export default function ProviderEditor({ provider, isNew, onChange, onBack, onDe
                 {showKey ? '隐藏' : '显示'}
               </button>
             </div>
+
+            <div style={{ marginTop: '14px', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={handleTestConnection}
+                disabled={testState === 'testing'}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--color-separator)',
+                  background: 'var(--color-bg-tertiary)',
+                  color: 'var(--color-text-secondary)',
+                  cursor: testState === 'testing' ? 'default' : 'pointer',
+                  fontSize: 'var(--text-xs)',
+                  opacity: testState === 'testing' ? 0.6 : 1,
+                }}
+              >
+                {testState === 'testing' ? '测试中…' : '测试连接'}
+              </button>
+              {testMessage && testState === 'done' && (
+                <span
+                  style={{
+                    fontSize: 'var(--text-xs)',
+                    color: testOk ? '#22c55e' : 'var(--color-danger)',
+                  }}
+                >
+                  {testMessage}
+                </span>
+              )}
+            </div>
+
+            {testModels.length > 0 && (
+              <div style={{ marginTop: '14px' }}>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', marginBottom: '8px' }}>
+                  检测到 {testModels.length} 个模型（双击加入模型列表）
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {testModels.map((m) => {
+                    const added = models.some((x) => x.name === m);
+                    return (
+                      <span
+                        key={m}
+                        title={added ? '已加入模型列表' : '双击加入模型列表'}
+                        onDoubleClick={() => addDetectedModel(m)}
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: '999px',
+                          border: '1px solid var(--color-separator)',
+                          background: added ? 'var(--color-bg-tertiary)' : 'var(--color-input-bg)',
+                          color: added ? 'var(--color-text-tertiary)' : 'var(--color-text-primary)',
+                          fontSize: 'var(--text-xs)',
+                          fontFamily: 'var(--font-mono)',
+                          cursor: added ? 'default' : 'pointer',
+                          userSelect: 'none',
+                        }}
+                      >
+                        {m}{added ? ' ✓' : ''}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </section>
 

@@ -21,7 +21,7 @@ import { QueryEngine } from '../../../../packages/coderix-core/src/core/query-en
 import type { QueryEngineConfig } from '../../../../packages/coderix-core/src/core/query-engine.js';
 import { SessionManager } from '../../../../packages/coderix-core/src/core/session.js';
 import { ToolRegistry } from '../../../../packages/coderix-core/src/core/tool-registry.js';
-import { createCallModelFromClient } from '../../../../packages/coderix-core/src/core/provider-adapter.js';
+import { createCallModel } from '../../../../packages/coderix-core/src/core/provider-adapter.js';
 import { PermissionMode, loadSettings } from '../../../../packages/coderix-core/src/index.js';
 import { loadConfig } from '../../../../packages/coderix-core/src/config.js';
 
@@ -194,12 +194,7 @@ async function initQueryEngine(workDir: string = activeWorkDir): Promise<void> {
 
   let callModel: QueryEngineConfig['callModel'];
   try {
-    const { default: Anthropic } = await import('@anthropic-ai/sdk');
-    const client = new Anthropic({
-      apiKey,
-      baseURL,
-    });
-    callModel = createCallModelFromClient(client as any, model);
+    callModel = createCallModel(appConfig, model);
     console.log(`[Coderix] callModel initialized: model=${model}, baseURL=${baseURL}`);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import type { AppConfig } from '../types.js';
 import type { AgentEngine, MemorySettings } from '@coderix/core';
+import { detectProtocol } from '@coderix/core';
 
 // ---------------------------------------------------------------------------
 // Settings types — matches ~/.coderix/settings.json format
@@ -38,6 +39,8 @@ export interface ModelEntry {
   max_tokens?: number;
   /** Provider identifier (anthropic, deepseek, openai, etc.) */
   provider?: string;
+  /** Wire protocol override — defaults to auto-detection from base_url. */
+  protocol?: 'anthropic' | 'openai';
 }
 
 export interface WebSearchConfig {
@@ -228,6 +231,7 @@ function resolveModel(settings: CoderSettings): {
   proxy?: string;
   maxTokens?: number;
   provider: string;
+  protocol?: 'anthropic' | 'openai';
   currency?: string;
   inputPrice?: number;
   outputPrice?: number;
@@ -259,6 +263,7 @@ function resolveModel(settings: CoderSettings): {
       proxy: entry.proxy,
       maxTokens: entry.max_tokens,
       provider: entry.provider ?? inferProvider(selectedModel),
+      protocol: entry.protocol,
       currency: price?.currency,
       inputPrice: price?.input,
       outputPrice: price?.output,
@@ -327,5 +332,5 @@ export function loadConfig(): AppConfig {
     );
   }
 
-  return { cwd: process.cwd(), baseUrl, apiKey, model, provider: resolved.provider, proxy, maxTokens, currency: resolved.currency, inputPrice: resolved.inputPrice ?? 0, outputPrice: resolved.outputPrice ?? 0, cacheReadPrice: resolved.cacheReadPrice ?? 0, maxContext: resolved.maxContext ?? 0, briefMode: settings.brief_mode ?? false, autoCompactEnabled: settings.auto_compact_enabled ?? true, compactThreshold: settings.compact_threshold ?? 0.85, theme: settings.theme, engine: settings.engine ?? 'coderix' };
+  return { cwd: process.cwd(), baseUrl, apiKey, model, provider: resolved.provider, protocol: resolved.protocol ?? detectProtocol(baseUrl), proxy, maxTokens, currency: resolved.currency, inputPrice: resolved.inputPrice ?? 0, outputPrice: resolved.outputPrice ?? 0, cacheReadPrice: resolved.cacheReadPrice ?? 0, maxContext: resolved.maxContext ?? 0, briefMode: settings.brief_mode ?? false, autoCompactEnabled: settings.auto_compact_enabled ?? true, compactThreshold: settings.compact_threshold ?? 0.85, theme: settings.theme, engine: settings.engine ?? 'coderix' };
 }

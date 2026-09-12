@@ -28,8 +28,7 @@ import type {
 } from '@agentclientprotocol/sdk';
 
 import { loadConfig, loadSettings, getMaxToolConcurrency } from '@coderix/core';
-import { createClient } from '../api/client.js';;
-import { createCallModelFromClient } from '@coderix/core';
+import { createCallModel } from '@coderix/core';
 import { QueryEngine } from '@coderix/core';
 import { SessionManager } from '@coderix/core';
 import { SystemPromptAssembler } from '@coderix/core';
@@ -91,8 +90,7 @@ const sessions = new Map<string, ActiveSession>();
 
 async function createEngine(cwd: string): Promise<{ engine: QueryEngine; sessionId: string; model: string }> {
   const config = loadConfig();
-  const client = createClient(config);
-  const callModel = createCallModelFromClient(client, config.model);
+  const callModel = createCallModel(config, config.model);
   const toolRegistry = buildAcpToolRegistry();
   const sessionManager = new SessionManager();
   sessionManager.create({ cwd, model: config.model });

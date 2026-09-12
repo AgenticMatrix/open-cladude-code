@@ -6,7 +6,7 @@
  * AssistantMessage objects compatible with query.ts's agent loop.
  */
 
-import type Anthropic from '@anthropic-ai/sdk';
+import Anthropic from '@anthropic-ai/sdk';
 import type {
   StreamEvent,
   AssistantMessage,
@@ -17,6 +17,11 @@ import type {
 } from './types.js';
 import type { CallModelParams } from './query.js';
 import { normalizeMessagesForAPI } from './message-normalizer.js';
+import { detectProtocol } from '../config.js';
+import { createCallModelFromOpenAI, type CallModelConfig } from './openai-adapter.js';
+
+export { createCallModelFromOpenAI } from './openai-adapter.js';
+export type { CallModelConfig } from './openai-adapter.js';
 
 // ---------------------------------------------------------------------------
 // Message conversion: core/types.ts → Anthropic API format
@@ -403,4 +408,33 @@ export function createCallModelFromClient(
       throw err;
     }
   };
+}
+
+// ---------------------------------------------------------------------------
+// Protocol-dispatching factory
+// ---------------------------------------------------------------------------
+
+/**
+ * Create a callModel function that routes by the endpoint's wire protocol.
+ *
+ * - `openai`  → OpenAI Chat Completions adapter (openai/grok/qwen/google/bytedance/openrouter/local).
+ * - `anthropic` (default) → the existing Anthropic Messages SDK adapter.
+ *
+ * Protocol resolves as `config.protocol ?? detectProtocol(config.baseUrl)`, so
+ * OpenAI-compatible endpoints are picked up automatically from their base URL.
+ */
+export function createCallModel(
+  config: CallModelConfig,
+  model: string,
+): (params: CallModelParams) => AsyncGenerator<StreamEvent | AssistantMessage> {
+  const protocol = config.protocol ?? detectProtocol(config.baseUrl);
+  if (protocol === 'openai') {
+    return createCallModelFromOpenAI(config, model);
+  }
+
+  const client = new Anthropic({
+    baseURL: config.baseUrl,
+    apiKey: config.apiKey,
+  });
+  return createCallModelFromClient(client, model);
 }

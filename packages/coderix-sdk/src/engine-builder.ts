@@ -7,12 +7,11 @@
  * but parameterized by the claude-code-sdk-shaped `Options`.
  */
 
-import Anthropic from '@anthropic-ai/sdk';
 import {
   loadConfig,
   loadSettings,
   getMaxToolConcurrency,
-  createCallModelFromClient,
+  createCallModel,
   SessionManager,
   ToolRegistry,
   QueryEngine,
@@ -191,8 +190,7 @@ export async function buildEngine(options: Options = {}): Promise<BuiltEngine> {
   const baseUrl = options.baseUrl ?? config.baseUrl;
   const apiKey = options.apiKey ?? config.apiKey;
 
-  const client = new Anthropic({ baseURL: baseUrl, apiKey });
-  const callModel = createCallModelFromClient(client, model);
+  const callModel = createCallModel({ baseUrl, apiKey, proxy: config.proxy, maxTokens: config.maxTokens }, model);
 
   const sessionManager = new SessionManager();
   if (options.resume) {

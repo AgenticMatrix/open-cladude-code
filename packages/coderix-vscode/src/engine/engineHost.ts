@@ -64,16 +64,8 @@ export class EngineHost {
 
     // ── API client & callModel ──────────────────────────────────────
     const appConfig = loadConfig();
-    const { default: Anthropic } = await import('@anthropic-ai/sdk');
-    const client = new Anthropic({
-      baseURL: appConfig.baseUrl,
-      apiKey: appConfig.apiKey,
-    });
-    const { createCallModelFromClient } = await import('@coderix/core');
-    const callModel = createCallModelFromClient(
-      client,
-      config.get<string>('model') || appConfig.model,
-    );
+    const { createCallModel } = await import('@coderix/core');
+    const callModel = createCallModel(appConfig, config.get<string>('model') || appConfig.model);
 
     // ── Session manager ─────────────────────────────────────────────
     this.sessionManager = new SessionManager();

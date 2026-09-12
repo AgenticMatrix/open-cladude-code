@@ -14,9 +14,8 @@
 
 import { WebSocketServer, WebSocket } from 'ws';
 import { loadConfig, loadSettings, getMaxToolConcurrency } from '../cli/config.js';
-import { createClient } from '../api/client.js';
 import {
-  createCallModelFromClient,
+  createCallModel,
   ToolRegistry,
   SessionManager,
   QueryEngine,
@@ -311,8 +310,7 @@ export async function startDesktopGateway(
     process.exit(1);
   }
 
-  const client = createClient(config);
-  const callModel = createCallModelFromClient(client, config.model);
+  const callModel = createCallModel(config, config.model);
   const toolRegistry = buildToolRegistry();
   const sessionManager = new SessionManager();
   sessionManager.create({ cwd, model: config.model });

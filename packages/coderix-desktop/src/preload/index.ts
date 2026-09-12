@@ -39,6 +39,7 @@ const CH = {
   CONFIG_GET: 'config:get',
   CONFIG_SET: 'config:set',
   CONFIG_GET_MODEL_LIST: 'config:getModelList',
+  CONFIG_TEST_CONNECTION: 'config:testConnection',
   APP_VERSION: 'app:version',
   APP_CHECK_UPDATE: 'app:checkUpdate',
   APP_QUIT: 'app:quit',
@@ -430,6 +431,11 @@ const coderixAPI = {
     /** Get the list of available AI models. */
     getModelList(): Promise<unknown[]> {
       return ipcRenderer.invoke(CH.CONFIG_GET_MODEL_LIST);
+    },
+
+    /** Probe a provider's baseUrl + apiKey and list its detected models. */
+    testConnection(baseUrl: string, apiKey?: string): Promise<unknown> {
+      return ipcRenderer.invoke(CH.CONFIG_TEST_CONNECTION, { baseUrl, apiKey });
     },
 
     /** Hot-reload QueryEngine with updated config (after model/API key change). */
