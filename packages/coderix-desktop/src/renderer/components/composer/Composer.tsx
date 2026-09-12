@@ -6,8 +6,6 @@ export interface ComposerProps {
   value?: string;
   onChange?: (value: string) => void;
   onSubmit?: (value: string) => void;
-  model?: string;
-  onModelPick?: () => void;
   disabled?: boolean;
   placeholder?: string;
   isStreaming?: boolean;
@@ -30,8 +28,6 @@ export function Composer({
   value: controlledValue,
   onChange,
   onSubmit,
-  model = 'sonnet 4.5',
-  onModelPick,
   disabled = false,
   placeholder = 'Ask Coderix anything...',
   isStreaming = false,

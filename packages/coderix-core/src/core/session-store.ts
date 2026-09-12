@@ -358,6 +358,8 @@ export interface SessionMeta {
   contextLength?: number;
   /** Working directory when the session was created or last resumed. */
   workDir?: string;
+  /** Model the session is bound to ("provider/model-name"), restored on resume. */
+  model?: string;
 }
 
 /**

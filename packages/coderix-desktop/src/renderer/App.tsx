@@ -23,6 +23,7 @@ import { Sidebar } from './components/sidebar/Sidebar';
 import { ChatView } from './components/chat/ChatView';
 import type { ChatViewMessage } from './components/chat/ChatView';
 import { Composer } from './components/composer/Composer';
+import { ModelCascadePicker } from './components/composer/ModelCascadePicker';
 import { PermissionPrompt } from './components/composer/PermissionPrompt';
 import { QuestionPrompt } from './components/composer/QuestionPrompt';
 import { DetailPanel } from './components/panels/DetailPanel';
@@ -33,7 +34,6 @@ import type { SidebarTab } from './components/sidebar/IconSidebar';
 
 import { useUIStore, useChatStore, useSessionStore, useStreamStore } from './store';
 import { useSettingsStore } from './store/settingsStore.js';
-import type { SettingsData } from './store/settingsStore.js';
 import { useEditorStore } from './store/editorStore.js';
 import { useStreamEvents } from './hooks/useStreamEvents';
 import {
@@ -83,21 +83,6 @@ function isBackgroundNotificationMessage(msg: { role: string; blocks: StreamBloc
  */
 function getFolderName(path: string): string {
   return path.split(/[\\/]/).pop() || path;
-}
-
-/**
- * Resolve the current model into a "provider/model" display string.
- * `default_model` may already be "provider/model", or a bare model name; in the
- * latter case, look up which provider owns it from the model list.
- */
-function formatModelWithProvider(settings: SettingsData | null): string {
-  const dm = settings?.defaultModel?.trim();
-  if (!dm) return '未配置模型';
-  if (dm.includes('/')) return dm;
-  const owner = settings?.providers.find((p) =>
-    p.models.some((m) => m.name === dm),
-  );
-  return owner ? `${owner.name}/${dm}` : dm;
 }
 
 // ---------------------------------------------------------------------------
@@ -329,6 +314,11 @@ export function App(): React.ReactElement {
       try {
         if (window.coderixAPI?.session?.load) {
           const session = await window.coderixAPI.session.load(id) as any;
+
+          // The main process may have promoted this session's own model to
+          // default_model (per-session model restore); re-read settings so the
+          // StatusBar/Composer labels update to match the restored model.
+          useSettingsStore.getState().load().catch(() => {});
 
           // Keep the workspace label in sync with the session's own workspace
           // (the main process already switched `currentWorkDir` on load).
@@ -661,7 +651,6 @@ export function App(): React.ReactElement {
         detailVisible={detailPanelOpen}
         statusBarProps={{
           engine: settings?.engine,
-          model: formatModelWithProvider(settings),
           agentStatus,
           inputTokens: tokenUsage.inputTokens || undefined,
           outputTokens: tokenUsage.outputTokens || undefined,
@@ -712,8 +701,8 @@ export function App(): React.ReactElement {
             />
           )}
 
-          {/* Workspace selector — above the composer input */}
-          <div ref={workspaceRef} className="relative flex items-center pl-11 pr-6 pb-1">
+          {/* Workspace + model selector — side by side above the composer input */}
+          <div ref={workspaceRef} className="relative flex items-center gap-3 pl-11 pr-6 pb-1">
             <button
               type="button"
               onClick={toggleWorkspaceMenu}
@@ -760,6 +749,8 @@ export function App(): React.ReactElement {
                 </button>
               </div>
             )}
+
+            <ModelCascadePicker model={settings?.defaultModel || '未配置模型'} />
           </div>
 
           {/* Composer — fixed at bottom of chat */}
@@ -773,8 +764,6 @@ export function App(): React.ReactElement {
               });
               useChatStore.getState().interruptStream();
             }}
-            model={settings?.defaultModel || '未配置模型'}
-            onModelPick={() => setSettingsOpen(true)}
           />
 
           {/* Terminal — collapsible, toggled from the icon sidebar */}

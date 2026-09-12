@@ -1,0 +1,145 @@
+/* ==========================================================================
+   ModelCascadePicker.css — two-step (provider → model) picker in the composer
+   ========================================================================== */
+
+.model-cascade-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.model-cascade-label {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Popup — opens upward from the model button (composer sits at the bottom) */
+.model-cascade-popup {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  width: 440px;
+  max-width: calc(100vw - 48px);
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-separator);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  z-index: 1000;
+}
+
+.model-cascade-header {
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-separator);
+  flex-shrink: 0;
+}
+
+.model-cascade-body {
+  display: flex;
+  min-height: 0;
+  max-height: 320px;
+}
+
+/* Provider column */
+.model-cascade-providers {
+  width: 160px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px;
+  border-right: 1px solid var(--color-separator);
+  overflow-y: auto;
+}
+
+.model-cascade-provider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: background 0.1s;
+}
+
+.model-cascade-provider:hover {
+  background: var(--color-bg-tertiary);
+}
+
+.model-cascade-provider.active {
+  background: var(--color-brand-muted);
+}
+
+.model-cascade-provider-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Model column */
+.model-cascade-models {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px;
+  overflow-y: auto;
+}
+
+.model-cascade-model {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: background 0.1s;
+}
+
+.model-cascade-model:hover {
+  background: var(--color-bg-tertiary);
+}
+
+.model-cascade-model.active {
+  background: var(--color-brand-muted);
+}
+
+.model-cascade-model-name {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.model-cascade-check {
+  flex-shrink: 0;
+  color: var(--color-brand);
+}
+
+.model-cascade-empty {
+  padding: 16px 12px;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  text-align: center;
+}

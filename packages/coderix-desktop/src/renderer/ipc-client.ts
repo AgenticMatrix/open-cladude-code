@@ -327,6 +327,13 @@ export async function deleteSession(id: string): Promise<unknown> {
   );
 }
 
+/** Bind the active session to a model (per-session model switch). */
+export async function setSessionModel(model: string): Promise<unknown> {
+  return invokeWithTimeout('session:setModel', () =>
+    getAPI().session.setModel(model),
+  );
+}
+
 // ===========================================================================
 //  Permissions
 // ===========================================================================

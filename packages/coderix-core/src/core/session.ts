@@ -150,6 +150,18 @@ export class SessionManager {
   }
 
   /**
+   * Bind the active session to a model and persist it to meta.json so the
+   * session remembers which model to use when resumed later.
+   */
+  setActiveModel(model: string): void {
+    const session = this.getActive();
+    session.model = model;
+    session.updatedAt = new Date();
+    const dir = getSessionDir(session.id);
+    writeSessionMeta(dir, { model }).catch(() => {});
+  }
+
+  /**
    * Resume a session from disk.
    */
   resume(sessionId: string): Session {
@@ -358,8 +370,9 @@ export class SessionManager {
           } as SessionEntry;
           appendEntry(jsonlPath, parentEntry).catch(() => {});
         }
-        // Persist workDir on first write so session listing can show it.
-        writeSessionMeta(dir, { workDir: session.cwd }).catch(() => {});
+        // Persist workDir + model on first write so session listing/resume
+        // can restore the workspace and the model the session was created with.
+        writeSessionMeta(dir, { workDir: session.cwd, model: session.model }).catch(() => {});
       }
 
       // Throttle: small sessions flush every 5 messages,
@@ -506,7 +519,7 @@ export class SessionManager {
    */
   private appendMetadata(session: Session): void {
     const dir = getSessionDir(session.id);
-    writeSessionMeta(dir, { title: session.title, workDir: session.cwd }).catch(() => {});
+    writeSessionMeta(dir, { title: session.title, workDir: session.cwd, model: session.model }).catch(() => {});
   }
 
   /**
@@ -619,7 +632,7 @@ export class SessionManager {
       totalCost: 0,
       createdAt: mtime,
       updatedAt: mtime,
-      model: lastUserPreview ?? 'unknown',
+      model: meta?.model ?? 'unknown',
       lastUserPreview: lastUserPreview ?? undefined,
       displayTitle,
       firstUserText: firstUserText ?? undefined,
@@ -846,7 +859,7 @@ export class SessionManager {
         createdAt: now,
         updatedAt: now,
         cwd: meta?.workDir ?? process.cwd(),
-        model: 'unknown',
+        model: meta?.model ?? 'unknown',
         provider: 'anthropic',
         tokenUsage: {
           inputTokens: persistedContextLength,

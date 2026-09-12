@@ -23,6 +23,7 @@ const CH = {
   SESSION_LOAD: 'session:load',
   SESSION_FORK: 'session:fork',
   SESSION_DELETE: 'session:delete',
+  SESSION_SET_MODEL: 'session:setModel',
   PERMISSION_APPROVE: 'permission:approve',
   PERMISSION_APPROVE_SESSION: 'permission:approveSession',
   PERMISSION_APPROVE_ALWAYS: 'permission:approveAlways',
@@ -300,6 +301,11 @@ const coderixAPI = {
     /** Delete a session by ID. */
     delete(sessionId: string): Promise<{ status: string }> {
       return ipcRenderer.invoke(CH.SESSION_DELETE, sessionId);
+    },
+
+    /** Bind the active session to a model (per-session model switch). */
+    setModel(model: string): Promise<{ status: string; model: string }> {
+      return ipcRenderer.invoke(CH.SESSION_SET_MODEL, model);
     },
   },
 

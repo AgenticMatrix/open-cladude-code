@@ -1,33 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Bot, Cpu, ArrowUp, ArrowDown, DollarSign, GitBranch, Command, ChevronDown, Terminal } from 'lucide-react';
+import React from 'react';
+import { Bot, ArrowUp, ArrowDown, DollarSign, GitBranch, Command, Terminal } from 'lucide-react';
 import { Badge } from './Badge';
 import './StatusBar.css';
-
-function useModelList(): string[] {
-  const [models, setModels] = useState<string[]>([]);
-  useEffect(() => {
-    const api = window.coderixAPI?.config;
-    if (api?.getModelList) {
-      api.getModelList().then((list: any) => {
-        const names = (list as any[])?.flatMap((e: any) => {
-          const provider = e.provider ?? '';
-          return (e.model || []).map((m: any) => {
-            const name = typeof m === 'string' ? m : m.name;
-            return provider ? `${provider}/${name}` : name;
-          });
-        }) || [];
-        setModels(names);
-      }).catch(() => {});
-    }
-  }, []);
-  return models;
-}
 
 export interface StatusBarProps {
   /** Current agent engine id (e.g. "coderix" / "claude-code") */
   engine?: string;
-  /** Current model name */
-  model?: string;
   /** Tokens used */
   inputTokens?: number;
   outputTokens?: number;
@@ -74,7 +52,6 @@ const ENGINE_LABELS: Record<string, string> = {
 
 export function StatusBar({
   engine,
-  model = 'sonnet 4.5',
   inputTokens,
   outputTokens,
   cost,
@@ -87,17 +64,6 @@ export function StatusBar({
   className = '',
 }: StatusBarProps): React.ReactElement {
   const status = statusConfig[agentStatus];
-  const models = useModelList();
-  const [modelOpen, setModelOpen] = useState(false);
-  const modelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const clickOut = (e: MouseEvent) => {
-      if (modelRef.current && !modelRef.current.contains(e.target as Node)) setModelOpen(false);
-    };
-    document.addEventListener('mousedown', clickOut);
-    return () => document.removeEventListener('mousedown', clickOut);
-  }, []);
 
   return (
     <div
@@ -118,44 +84,6 @@ export function StatusBar({
           <div className="w-px h-3 bg-[var(--color-separator)]" />
         </>
       )}
-
-      {/* Model selector */}
-      <div ref={modelRef} className="relative">
-        <button
-          type="button"
-          onClick={() => setModelOpen(!modelOpen)}
-          className="flex items-center gap-1.5 text-[var(--color-text-primary)] hover:text-[var(--color-brand)] transition-colors cursor-pointer"
-          title="切换模型"
-        >
-          <Cpu size={12} className="text-[var(--color-text-tertiary)]" />
-          <span className="font-medium">{model || '选择模型'}</span>
-          <ChevronDown size={10} />
-        </button>
-        {modelOpen && models.length > 0 && (
-          <div className="absolute bottom-full left-0 mb-1 bg-[var(--color-bg-primary)] border border-[var(--color-separator)] rounded-[var(--radius-md)] shadow-lg z-50 min-w-[160px] max-h-[200px] overflow-y-auto py-1">
-            {models.map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => {
-                  setModelOpen(false);
-                  // Write to settings and trigger hot-reload
-                  const api = window.coderixAPI;
-                  if (api?.config?.set && api?.config?.reload) {
-                    api.config.set('', { default_model: m }).then(() => api.config.reload());
-                  }
-                }}
-                className={`w-full text-left px-3 py-1.5 text-xs hover:bg-[var(--color-bg-tertiary)] ${m === model ? 'text-[var(--color-brand)] font-medium' : 'text-[var(--color-text-primary)]'}`}
-              >
-                {m}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Divider */}
-      <div className="w-px h-3 bg-[var(--color-separator)]" />
 
       {/* Token usage */}
       {(inputTokens !== undefined || outputTokens !== undefined) && (

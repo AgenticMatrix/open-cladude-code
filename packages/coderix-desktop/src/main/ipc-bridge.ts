@@ -75,6 +75,7 @@ export const IPC_CHANNELS = {
   SESSION_LOAD: 'session:load',
   SESSION_FORK: 'session:fork',
   SESSION_DELETE: 'session:delete',
+  SESSION_SET_MODEL: 'session:setModel',
   PERMISSION_APPROVE: 'permission:approve',
   PERMISSION_APPROVE_SESSION: 'permission:approveSession',
   PERMISSION_APPROVE_ALWAYS: 'permission:approveAlways',
@@ -563,18 +564,39 @@ export function createIpcBridge(config: IpcBridgeConfig): IpcBridge {
     // Restore the session's workspace so a reloaded conversation opens in the
     // directory it was created in. `resume` sets it as the active session, so
     // keep `currentWorkDir` in sync (and reload the engine) when it differs.
+    let reloadWorkDir: string | undefined;
     if (session.cwd) {
       const sessionCwd = resolve(session.cwd);
       if (existsSync(sessionCwd) && sessionCwd !== currentWorkDir) {
         currentWorkDir = sessionCwd;
         rememberProject(sessionCwd);
-        if (config.reloadQueryEngine) {
-          await config.reloadQueryEngine(sessionCwd);
-        }
+        reloadWorkDir = sessionCwd;
       }
     }
 
-    return { id: session.id, title: session.title, messages: session.messages, turnCount: session.turnCount, cwd: session.cwd };
+    // Restore the session's own model (per-session model switching). When the
+    // session is bound to a model that differs from the current global default,
+    // promote it so the engine reload picks it up for subsequent turns in this
+    // session.
+    let modelChanged = false;
+    const sessionModel = session.model;
+    if (sessionModel && sessionModel !== 'unknown') {
+      const current = loadSettings();
+      if (current.default_model !== sessionModel) {
+        const settingsDir = join(homedir(), '.coderix');
+        const settingsPath = join(settingsDir, 'settings.json');
+        const merged = { ...current, default_model: sessionModel };
+        if (!existsSync(settingsDir)) mkdirSync(settingsDir, { recursive: true });
+        writeFileSync(settingsPath, JSON.stringify(merged, null, 2), 'utf-8');
+        modelChanged = true;
+      }
+    }
+
+    if ((reloadWorkDir !== undefined || modelChanged) && config.reloadQueryEngine) {
+      await config.reloadQueryEngine(reloadWorkDir);
+    }
+
+    return { id: session.id, title: session.title, messages: session.messages, turnCount: session.turnCount, cwd: session.cwd, model: session.model };
   });
 
   ipcMain.handle(IPC_CHANNELS.SESSION_FORK, async (_event, sessionId: string) => {
@@ -587,6 +609,38 @@ export function createIpcBridge(config: IpcBridgeConfig): IpcBridge {
     if (!sessionManager) throw new Error('SessionManager not initialized');
     sessionManager.delete(sessionId);
     return { status: 'deleted' };
+  });
+
+  ipcMain.handle(IPC_CHANNELS.SESSION_SET_MODEL, async (_event, model: string) => {
+    if (!sessionManager) throw new Error('SessionManager not initialized');
+    if (!model || typeof model !== 'string') {
+      throw new Error('Invalid model name');
+    }
+
+    // Bind the active session to the chosen model (persists to meta.json). When
+    // there's no active session yet (e.g. before the first message), skip the
+    // per-session bind — the global default below still applies and the next
+    // created session picks it up.
+    try {
+      sessionManager.setActiveModel(model);
+    } catch {
+      // No active session — proceed with the global switch only.
+    }
+
+    // Persist default_model so the engine (and future sessions) use the new model.
+    const settingsDir = join(homedir(), '.coderix');
+    const settingsPath = join(settingsDir, 'settings.json');
+    const current = loadSettings();
+    const merged = { ...current, default_model: model };
+    if (!existsSync(settingsDir)) mkdirSync(settingsDir, { recursive: true });
+    writeFileSync(settingsPath, JSON.stringify(merged, null, 2), 'utf-8');
+
+    // Reload the engine with the new model.
+    if (config.reloadQueryEngine) {
+      await config.reloadQueryEngine();
+    }
+
+    return { status: 'ok', model };
   });
 
   // ── Permission ─────────────────────────────────────────────────────────
@@ -1551,6 +1605,7 @@ export function createIpcBridge(config: IpcBridgeConfig): IpcBridge {
       ipcMain.removeHandler(IPC_CHANNELS.SESSION_LOAD);
       ipcMain.removeHandler(IPC_CHANNELS.SESSION_FORK);
       ipcMain.removeHandler(IPC_CHANNELS.SESSION_DELETE);
+      ipcMain.removeHandler(IPC_CHANNELS.SESSION_SET_MODEL);
       ipcMain.removeHandler(IPC_CHANNELS.PERMISSION_APPROVE);
       ipcMain.removeHandler(IPC_CHANNELS.PERMISSION_APPROVE_SESSION);
       ipcMain.removeHandler(IPC_CHANNELS.PERMISSION_APPROVE_ALWAYS);
